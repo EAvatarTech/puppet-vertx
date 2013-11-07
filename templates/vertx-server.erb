@@ -1,0 +1,351 @@
+#!/bin/bash
+
+#
+#
+# Startup script for EAvatar server
+#
+# chkconfig: 345 94 16
+# description: Vert.x application server.
+# to enable on bootup on redhat "chkconfig --level 35 eavatard on"
+# to enable on bootup on debian "update-rc.d eavatard defaults" or the
+# slightly longer (but better run levels) "update-rc.d eavatard start 91 2 3 4 5  . stop 20 0 1 6 ."
+
+### BEGIN INIT INFO
+# Provides:          vertx-server
+# Required-Start:    $syslog $time
+# Required-Stop:     $syslog $time
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Vert.x application server.
+# Description:       Vert.x application server for real-time web.
+### END INIT INFO
+
+if [ -e /etc/debian_version ]; then
+    . /lib/lsb/init-functions
+elif [ -e /etc/init.d/functions ] ; then
+    . /etc/init.d/functions
+fi
+
+if ! type log_daemon_msg 2>&1 |grep -qai function ; then
+# no lsb setup?  no problem.  we will add them in
+
+log_use_fancy_output () {
+    TPUT=/usr/bin/tput
+    EXPR=/usr/bin/expr
+    if [ -t 1 ] && [ "x$TERM" != "" ] && [ "x$TERM" != "xdumb" ] && [ -x $TPUT ] && [ -x $EXPR ] && $TPUT hpa 60 >/dev/null 2>&1 && $TPUT setaf 1 >/dev/null 2>&1; then
+        [ -z $FANCYTTY ] && FANCYTTY=1 || true
+    else
+        FANCYTTY=0
+    fi
+    case "$FANCYTTY" in
+        1|Y|yes|true)   true;;
+        *)              false;;
+    esac
+}
+
+log_success_msg () {
+    if [ -n "${1:-}" ]; then
+        log_begin_msg $@
+    fi
+    log_end_msg 0
+}
+
+log_failure_msg () {
+    if [ -n "${1:-}" ]; then
+        log_begin_msg $@
+    fi
+    log_end_msg 1 || true
+}
+
+log_warning_msg () {
+    if [ -n "${1:-}" ]; then
+        log_begin_msg $@
+    fi
+    log_end_msg 255 || true
+}
+
+#
+# NON-LSB HELPER FUNCTIONS
+#
+# int get_lsb_header_val (char *scriptpathname, char *key)
+get_lsb_header_val () {
+        if [ ! -f "$1" ] || [ -z "${2:-}" ]; then
+                return 1
+        fi
+        LSB_S="### BEGIN INIT INFO"
+        LSB_E="### END INIT INFO"
+        sed -n "/$LSB_S/,/$LSB_E/ s/# $2: \(.*\)/\1/p" $1
+}
+
+# int log_begin_message (char *message)
+log_begin_msg () {
+    if [ -z "${1:-}" ]; then
+        return 1
+    fi
+    echo -n "$@"
+}
+
+# Sample usage:
+# log_daemon_msg "Starting GNOME Login Manager" "gdm"
+#
+# On Debian, would output "Starting GNOME Login Manager: gdm"
+# On Ubuntu, would output " * Starting GNOME Login Manager..."
+#
+# If the second argument is omitted, logging suitable for use with
+# log_progress_msg() is used:
+#
+# log_daemon_msg "Starting remote filesystem services"
+#
+# On Debian, would output "Starting remote filesystem services:"
+# On Ubuntu, would output " * Starting remote filesystem services..."
+
+log_daemon_msg () {
+    if [ -z "${1:-}" ]; then
+        return 1
+    fi
+    log_daemon_msg_pre "$@"
+
+    if [ -z "${2:-}" ]; then
+        echo -n "$1:"
+        return
+    fi
+
+    echo -n "$1: $2"
+    log_daemon_msg_post "$@"
+}
+
+# #319739
+#
+# Per policy docs:
+#
+#     log_daemon_msg "Starting remote file system services"
+#     log_progress_msg "nfsd"; start-stop-daemon --start --quiet nfsd
+#     log_progress_msg "mountd"; start-stop-daemon --start --quiet mountd
+#     log_progress_msg "ugidd"; start-stop-daemon --start --quiet ugidd
+#     log_end_msg 0
+#
+# You could also do something fancy with log_end_msg here based on the
+# return values of start-stop-daemon; this is left as an exercise for
+# the reader...
+#
+# On Ubuntu, one would expect log_progress_msg to be a no-op.
+log_progress_msg () {
+    if [ -z "${1:-}" ]; then
+        return 1
+    fi
+    echo -n " $@"
+}
+
+
+# int log_end_message (int exitstatus)
+log_end_msg () {
+    # If no arguments were passed, return
+    if [ -z "${1:-}" ]; then
+        return 1
+    fi
+
+    retval=$1
+
+    log_end_msg_pre "$@"
+
+    # Only do the fancy stuff if we have an appropriate terminal
+    # and if /usr is already mounted
+    if log_use_fancy_output; then
+        RED=`$TPUT setaf 1`
+        YELLOW=`$TPUT setaf 3`
+        NORMAL=`$TPUT op`
+    else
+        RED=''
+        YELLOW=''
+        NORMAL=''
+    fi
+
+    if [ $1 -eq 0 ]; then
+        echo "."
+    elif [ $1 -eq 255 ]; then
+        /bin/echo -e " ${YELLOW}(warning).${NORMAL}"
+    else
+        /bin/echo -e " ${RED}failed!${NORMAL}"
+    fi
+    log_end_msg_post "$@"
+    return $retval
+}
+
+log_action_msg () {
+    echo "$@."
+}
+
+log_action_begin_msg () {
+    echo -n "$@..."
+}
+
+log_action_cont_msg () {
+    echo -n "$@..."
+}
+
+log_action_end_msg () {
+    log_action_end_msg_pre "$@"
+    if [ -z "${2:-}" ]; then
+        end="."
+    else
+        end=" ($2)."
+    fi
+
+    if [ $1 -eq 0 ]; then
+        echo "done${end}"
+    else
+        if log_use_fancy_output; then
+            RED=`$TPUT setaf 1`
+            NORMAL=`$TPUT op`
+            /bin/echo -e "${RED}failed${end}${NORMAL}"
+        else
+            echo "failed${end}"
+        fi
+    fi
+    log_action_end_msg_post "$@"
+}
+
+# Hooks for /etc/lsb-base-logging.sh
+log_daemon_msg_pre () { :; }
+log_daemon_msg_post () { :; }
+log_end_msg_pre () { :; }
+log_end_msg_post () { :; }
+log_action_end_msg_pre () { :; }
+log_action_end_msg_post () { :; }
+
+fi
+
+# how long to wait for the app to startup before saying 'its probably up'
+STARTWAITTIMES=45
+
+# figure out what to do based on the name of this script
+HOMEDIR=<%= homedir %>
+APPUSER=<%= vertx_user %>
+APPNAME="Vert.x Server"
+
+
+#Necessary environment variables
+[ -e /usr/java/jdk/bin/java ] && export JAVA_HOME=/usr/java/jdk
+#export LD_KERNEL_ASSUME="2.2.5"
+
+
+GREPSTRING='vertx.home'
+
+# allow overriding of these variables without script changes via a conf file
+if [ -e $HOMEDIR/initscript/initscript.conf ] ; then
+    source $HOMEDIR/initscript/initscript.conf
+fi
+
+
+#Check for init script
+if [ ! -f $INITSCRIPT ]; then
+    log_failure_msg "$APPNAME not available... (no  $INITSCRIPT)"
+    exit 1
+fi
+
+if ! id "$APPUSER" >/dev/null; then
+    log_failure_msg "$APPUSER is not a user.  Please create a user account first."
+    exit 1
+fi
+
+setpslist() {
+    PSLIST=$(ps a --width=1000 --User "$APPUSER" -o  pid,user,command  | grep "$GREPSTRING" | grep -v grep | awk '{printf $1 " "}')
+}
+
+start() {
+    setpslist
+    log_daemon_msg "Starting" "$APPNAME"
+    if [ ! -z "$PSLIST" ]; then
+        log_warning_msg "$APPNAME already running, can't start it"
+        log_end_msg 1
+        return 1
+    fi
+    if [ ! -e "$LOGFILE" -a ! -e "`dirname \"$LOGFILE\"`" ]; then
+        #log_action_msg "mkdir -p $(dirname "$LOGFILE")"
+        mkdir -p $(dirname "$LOGFILE")
+    fi
+    if [ -e "$LOGFILE" ]; then
+        #log_action_msg "mv $LOGFILE $LOGFILE.old"
+        mv $LOGFILE{,.old}
+    fi
+
+    sudo  -u $APPUSER ${HOMEDIR}/bin/vertx run startup.groovy  2>&1 &
+    
+    sleep 1
+    setpslist
+    if [ -z "$PSLIST" ]; then
+        log_end_msg 1
+        return 1
+    fi
+}
+
+
+killprocesses() {
+    log_daemon_msg "Killing" "$APPNAME"
+    setpslist
+    if [ -z "$PSLIST" ]; then
+        log_progress_msg "$APPNAME not running, no need to kill it"
+        log_end_msg 0
+	return
+    fi
+    kill -9 $PSLIST
+    log_end_msg 0
+}
+
+stop() {
+    log_daemon_msg "Stopping" "$APPNAME"
+    setpslist
+    if [ -z "$PSLIST" ]; then
+        log_daemon_msg "$APPNAME not running, no need to stop it"
+        log_end_msg 0
+        return
+    fi
+
+    kill -1 $PSLIST
+    
+    # wait a while for the app to shutdown gracefully, else kill it
+    sleep 3
+    setpslist
+    if [ ! -z "$PSLIST" ]; then
+        log_warning_msg "'stop' signal refused, killing $APPNAME."
+        kill -9 $PSLIST
+    fi    
+}
+
+status() {
+    setpslist
+    if [ ! -z "$PSLIST" ]; then
+        log_daemon_msg "$APPNAME ( PIDs $PSLIST ) is running."
+    else
+        log_failure_msg "$APPNAME is not running"
+        log_end_msg 1
+    fi
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+     stop)
+        stop
+        ;;
+     restart)
+        stop
+        sleep 3
+        start
+        ;;
+     kill)
+        killprocesses
+        ;;
+     killstart)
+        killprocesses
+	start
+        ;;
+     status)
+        status
+        ;;
+     *)
+        echo "Usage: $0 {start|stop|restart|status|kill|killstart}"
+     exit 1
+esac
+exit $?

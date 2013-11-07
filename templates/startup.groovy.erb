@@ -1,0 +1,10 @@
+//
+// the startup script for actually deploy application modules.
+// Applications should override this to launch modules.
+//
+def logger = container.logger
+logger.info "Vert.x server started."
+
+<% boot_modules.each do |name, version, conf| -%>
+container.deployModule("<%= name -%>", ['vert.home': '<%= homedir -%>'])
+<% end -%>
