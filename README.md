@@ -11,11 +11,14 @@ All relevant files are put under the home folder '/opt/vertx' in unix-like syste
 .
 ├── bin
 ├── conf
-├── libs
+├── lib
 ├── mods
 ├── sys-mods
+├── web
 └── var
     ├── data
     └── logs
 ```
+All configurations are contained in 'conf/application.json' which is composed with puppet-concat module.
 
+### Only tested with Ubuntu 12.04 
