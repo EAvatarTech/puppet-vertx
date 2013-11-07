@@ -3,13 +3,14 @@
 #
 
 class vertx(
-    $version        = $vertx::params::version,
-    $homedir        = $vertx::params::homedir,
-    $bindir         = $vertx::params::bindir,
-    $download_url   = $vertx::params::download_url,
-    $boot_modules    = []
+    $version            = $vertx::params::version,
+    $homedir            = $vertx::params::homedir,
+    $bindir             = $vertx::params::bindir,
+    $download_url       = $vertx::params::download_url,
+    $startup_modules    = undef
 ) inherits vertx::params {
 
+    
     class {'vertx::package':
         version => $version,
         homedir => $homedir,
@@ -24,8 +25,9 @@ class vertx(
     
     class {'vertx::startup':
         homedir => $homedir,
-        boot_modules => $boot_modules 
+        startup_modules => $startup_modules 
     } ->
+    
     
     vertx::module { 'io.vertx~lang-groovy':
         version => '2.0.0-final'

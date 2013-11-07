@@ -3,10 +3,11 @@
 #
 
 class vertx::files(
-    $homedir = $vertx::params::homedir,
-    $bindir = $vertx::params::bindir,
-    $confdir = $vertx::params::confdir,
-    $vertx_user = $vertx::params::user,
+    $homedir = $::vertx::params::homedir,
+    $bindir  = $::vertx::params::bindir,
+    $confdir = $::vertx::params::confdir,
+    $webdir  = $::vertx::params::webdir,
+    $vertx_user = $::vertx::params::user,
 ) {
 
     file { "${bindir}/vertx":
@@ -50,6 +51,13 @@ class vertx::files(
     
     file { "${confdir}/repos.txt":
         content => template('vertx/repos.txt.erb'),
+        owner => $vertx::params::user,
+        group => $vertx::params::group,
+        mode => 0644,
+    }
+    
+    file { "${webdir}/index.html":
+        content => template('vertx/index.html.erb'),
         owner => $vertx::params::user,
         group => $vertx::params::group,
         mode => 0644,

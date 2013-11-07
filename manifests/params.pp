@@ -10,6 +10,7 @@ class vertx::params {
     $vardir             = '/opt/vertx/var'
     $logdir             = '/opt/vertx/var/logs'
     $datadir            = '/opt/vertx/var/data'
+    $webdir             = '/opt/vertx/web'
     $user               = 'vertx'
     $group              = 'vertx'
     $download_url       = undef

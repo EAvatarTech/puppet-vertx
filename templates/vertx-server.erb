@@ -269,7 +269,7 @@ start() {
         mv $LOGFILE{,.old}
     fi
 
-    sudo  -u $APPUSER ${HOMEDIR}/bin/vertx run startup.groovy  2>&1 &
+    sudo  -u $APPUSER -i bash -c "${HOMEDIR}/bin/vertx run startup.groovy -conf ${HOMEDIR}/conf/application.json"  2>&1 &
     
     sleep 1
     setpslist

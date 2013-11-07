@@ -30,8 +30,12 @@ class vertx::package(
     }
 
     # Builds basic directory structure and purges old files.
-    file { [$homedir, "$homedir/bin" , "$homedir/conf", 
-             "$homedir/mods", "$homedir/sys-mods"]:
+    file { [$homedir, 
+           "$homedir/bin" , 
+           "$homedir/conf",
+           "$homedir/web", 
+           "$homedir/mods", 
+           "$homedir/sys-mods"]:
         ensure  => directory,
         owner => 'vertx',
         group => 'vertx',
@@ -39,7 +43,9 @@ class vertx::package(
     } ->
 
     # Ensures the 'var' and its subfolders and keeps existing data files and logs.
-    file { ["$homedir/var", "$homedir/var/logs", "$homedir/var/data"]:
+    file { ["$homedir/var", 
+            "$homedir/var/logs", 
+            "$homedir/var/data"]:
         ensure  => directory,
         owner => 'vertx',
         group => 'vertx',

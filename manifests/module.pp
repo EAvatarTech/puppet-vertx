@@ -9,6 +9,8 @@ define vertx::module(
     $bindir  = $vertx::params::bindir,
 ) {
 
+  validate_string($version)
+  
   $modname = "${name}~${version}"
   exec { "vertx_install_mod_${name}":
     path => ['/usr/bin', '/usr/sbin', '/bin', '/sbin'],

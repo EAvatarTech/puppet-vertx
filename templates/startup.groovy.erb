@@ -5,6 +5,16 @@
 def logger = container.logger
 logger.info "Vert.x server started."
 
-<% boot_modules.each do |name, version, conf| -%>
-container.deployModule("<%= name -%>", ['vert.home': '<%= homedir -%>'])
+def appConfig = container.config
+
+<% startup_modules.each do |name, hash| -%>
+def conf = appConfig["<%= name -%>"]
+
+// set vertx.home
+if( conf == null ) {
+  conf = ["vertx.home" : "<%= homedir -%>"]
+} else {
+  conf["vertx.home"] = "<%= homedir -%>"
+}
+container.deployModule("<%= name -%>~<%= hash['version'] -%>", conf)
 <% end -%>
